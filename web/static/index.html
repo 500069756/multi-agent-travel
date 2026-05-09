@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Travel Planner</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1217;
+      --panel: #1a1f2a;
+      --panel-2: #232a37;
+      --border: #2c3543;
+      --text: #e6ebf5;
+      --muted: #8a94a7;
+      --accent: #7aa2ff;
+      --pass: #5eba7d;
+      --fail: #e26c6c;
+      --warn: #e2b85c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    h1 { font-size: 20px; margin: 0; font-weight: 600; }
+    h1 .accent { color: var(--accent); }
+    .health { font-size: 12px; color: var(--muted); }
+    .health.ok { color: var(--pass); }
+    .health.bad { color: var(--fail); }
+    main {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      padding: 24px 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+    }
+    textarea:focus { outline: none; border-color: var(--accent); }
+    button {
+      margin-top: 12px;
+      width: 100%;
+      background: var(--accent);
+      color: #0a0e15;
+      border: none;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    button:hover:not(:disabled) { filter: brightness(1.08); }
+    .status { margin-top: 16px; font-size: 13px; color: var(--muted); }
+    .status .spinner {
+      display: inline-block; width: 12px; height: 12px;
+      border: 2px solid var(--muted); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .cycles { margin-top: 16px; font-size: 13px; }
+    .cycle {
+      padding: 8px 12px;
+      border-radius: 5px;
+      margin-bottom: 6px;
+      background: var(--panel-2);
+      border-left: 3px solid var(--muted);
+    }
+    .cycle.PASS { border-left-color: var(--pass); }
+    .cycle.FAIL { border-left-color: var(--fail); }
+    .cycle .label { font-weight: 600; }
+    .cycle .failures { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .verdict {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .verdict.PASS { background: rgba(94, 186, 125, 0.18); color: var(--pass); }
+    .verdict.FAIL { background: rgba(226, 108, 108, 0.18); color: var(--fail); }
+    .summary-bar {
+      display: flex; gap: 16px; flex-wrap: wrap;
+      font-size: 13px; color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .summary-bar b { color: var(--text); }
+    .doc {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 28px 32px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .doc h1, .doc h2, .doc h3 { color: var(--text); margin-top: 1.5em; }
+    .doc h1 { font-size: 24px; }
+    .doc h2 { font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .doc h3 { font-size: 16px; color: var(--accent); }
+    .doc table {
+      width: 100%; border-collapse: collapse; margin: 12px 0;
+      font-size: 14px;
+    }
+    .doc th, .doc td {
+      border: 1px solid var(--border); padding: 8px 12px; text-align: left;
+    }
+    .doc th { background: var(--panel-2); }
+    .doc blockquote {
+      border-left: 3px solid var(--accent);
+      margin: 12px 0; padding: 4px 14px;
+      background: rgba(122, 162, 255, 0.06);
+      color: var(--muted);
+    }
+    .doc code {
+      background: var(--panel-2); padding: 1px 6px; border-radius: 3px; font-size: 13px;
+    }
+    .placeholder { color: var(--muted); font-style: italic; padding: 40px; text-align: center; }
+    .error { color: var(--fail); padding: 12px; background: rgba(226, 108, 108, 0.08); border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span class="accent">✈</span> AI Travel Planner</h1>
+    <span id="health" class="health">checking…</span>
+  </header>
+
+  <main>
+    <section class="panel">
+      <label for="request">Travel request</label>
+      <textarea id="request" placeholder="e.g. Plan a 5-day trip to Japan...">Plan a 5-day trip to Japan. Tokyo + Kyoto. $3,000 budget. Love food and temples, hate crowds.</textarea>
+      <button id="submit">Plan trip</button>
+      <div id="status" class="status"></div>
+      <div id="cycles" class="cycles"></div>
+    </section>
+
+    <section>
+      <div id="summary"></div>
+      <div id="doc" class="doc">
+        <div class="placeholder">Submit a travel request to see the plan here.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const cyclesEl = document.getElementById("cycles");
+    const summaryEl = document.getElementById("summary");
+    const docEl = document.getElementById("doc");
+    const button = document.getElementById("submit");
+    const requestEl = document.getElementById("request");
+    const healthEl = document.getElementById("health");
+
+    fetch("/api/health").then(r => r.json()).then(j => {
+      if (j.groq_key_configured) {
+        healthEl.className = "health ok";
+        healthEl.textContent = "● API key configured";
+      } else {
+        healthEl.className = "health bad";
+        healthEl.textContent = "● GROQ_API_KEY not set (needs gsk_ key)";
+      }
+    }).catch(() => {
+      healthEl.className = "health bad";
+      healthEl.textContent = "● API unreachable";
+    });
+
+    button.addEventListener("click", async () => {
+      const text = requestEl.value.trim();
+      if (!text) return;
+
+      button.disabled = true;
+      statusEl.innerHTML = '<span class="spinner"></span> Running pipeline (intake → research/logistics → budget → synthesis → review)…';
+      cyclesEl.innerHTML = "";
+      summaryEl.innerHTML = "";
+      docEl.innerHTML = '<div class="placeholder">Generating itinerary…</div>';
+
+      try {
+        const res = await fetch("/api/plan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ request: text }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          throw new Error(err.detail || "Request failed");
+        }
+        const data = await res.json();
+        renderResult(data);
+      } catch (e) {
+        statusEl.innerHTML = "";
+        docEl.innerHTML = '<div class="error">Error: ' + escapeHtml(e.message) + '</div>';
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    function renderResult(data) {
+      statusEl.innerHTML = data.converged
+        ? `<span style="color: var(--pass);">✓ Pipeline converged after ${data.cycles.length} cycle(s).</span>`
+        : `<span style="color: var(--warn);">⚠ Hit cycle cap — delivered with caveats.</span>`;
+
+      cyclesEl.innerHTML = data.cycles.map(c => `
+        <div class="cycle ${c.overall}">
+          <div><span class="label">Cycle ${c.cycle}:</span> <span class="verdict ${c.overall}">${c.overall}</span>${c.revision_target ? ' → revise <b>' + c.revision_target + '</b>' : ''}</div>
+          ${c.failures.length ? '<div class="failures">' + c.failures.map(f => '• ' + escapeHtml(f)).join('<br>') + '</div>' : ''}
+        </div>
+      `).join("");
+
+      const overBudget = data.total_estimated_cost_usd > data.budget_usd;
+      summaryEl.innerHTML = `
+        <div class="summary-bar">
+          <span>Verdict: <span class="verdict ${data.final_overall}">${data.final_overall}</span></span>
+          <span>Cost: <b style="color: ${overBudget ? 'var(--fail)' : 'var(--pass)'};">$${Math.round(data.total_estimated_cost_usd).toLocaleString()}</b> / $${Math.round(data.budget_usd).toLocaleString()}</span>
+          <span>Cycles: <b>${data.cycles.length}</b></span>
+        </div>
+      `;
+
+      docEl.innerHTML = marked.parse(data.document);
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+  </script>
+</body>
+</html>

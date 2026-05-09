@@ -1,0 +1,12 @@
+.env
+.env.example
+__pycache__/
+*.pyc
+.venv/
+venv/
+trip_plan.md
+*.output
+.git/
+refactor_to_groq.py
+IMPLEMENTATION_PLAN.md
+architecture/
